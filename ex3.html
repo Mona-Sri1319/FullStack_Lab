@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>jQuery Quiz App</title>
+
+    <!-- jQuery CDN -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<style>
+    body {
+        font-family: 'Segoe UI', Tahoma, sans-serif;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        min-height: 100vh;
+    }
+    
+    .container {
+        width: 520px;
+        margin: 60px auto;
+        background: #ffffff;
+        padding: 25px;
+        border-radius: 12px;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+    }
+    
+    h2 {
+        text-align: center;
+        color: #4a148c;
+        margin-bottom: 15px;
+    }
+    
+    .question {
+        font-size: 18px;
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 15px;
+    }
+    
+    .options label {
+        display: block;
+        padding: 10px;
+        margin-bottom: 8px;
+        border-radius: 6px;
+        background: #f3f3f3;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .options label:hover {
+        background: #e1bee7;
+    }
+    
+    .options input[type="radio"] {
+        margin-right: 8px;
+    }
+    
+    button {
+        padding: 10px 18px;
+        border: none;
+        border-radius: 6px;
+        background: #6a1b9a;
+        color: white;
+        font-size: 14px;
+        cursor: pointer;
+        transition: 0.3s;
+    }
+    
+    button:hover {
+        background: #4a148c;
+        transform: translateY(-1px);
+    }
+    
+    #prevBtn {
+        background: #9e9e9e;
+    }
+    
+    #prevBtn:hover {
+        background: #757575;
+    }
+    
+    .error {
+        color: #d32f2f;
+        font-size: 14px;
+        margin-top: 10px;
+    }
+    
+    #timer {
+        color: #d81b60;
+        font-weight: bold;
+    }
+    
+    input[type="text"] {
+        width: 95%;
+        padding: 10px;
+        border-radius: 6px;
+        border: 1px solid #ccc;
+        margin-top: 5px;
+    }
+    
+    input[type="text"]:focus {
+        outline: none;
+        border-color: #6a1b9a;
+    }
+    
+    .summary {
+        text-align: center;
+        font-size: 16px;
+        line-height: 1.8;
+    }
+    
+    .summary strong {
+        color: #4a148c;
+    }
+    
+    #restartQuiz {
+        margin-top: 15px;
+        background: #2e7d32;
+    }
+    
+    #restartQuiz:hover {
+        background: #1b5e20;
+    }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+    <!-- USER INFO SCREEN -->
+    <div id="userInfo">
+        <h2>Start Quiz</h2>
+        <label>Name:</label>
+        <input type="text" id="username"><br><br>
+
+        <label>Roll No:</label>
+        <input type="text" id="rollno"><br><br>
+
+        <button id="startQuiz">Start Quiz</button>
+        <p class="error"></p>
+    </div>
+
+    <!-- QUIZ SCREEN -->
+    <div id="quiz" style="display:none;">
+        <h2>Quiz</h2>
+        <p><strong>Time Left:</strong> <span id="timer">60</span> seconds</p>
+
+        <div class="question"></div>
+        <div class="options"></div>
+
+        <button id="prevBtn">Previous</button>
+        <button id="nextBtn">Next</button>
+
+        <p class="error"></p>
+    </div>
+
+    <!-- SUMMARY SCREEN -->
+    <div id="summary" style="display:none;" class="summary">
+        <h2>Quiz Summary</h2>
+        <p id="summaryText"></p>
+        <button id="restartQuiz">Restart Quiz</button>
+    </div>
+
+</div>
+
+<script>
+    $(document).ready(function () {
+    
+        // QUESTIONS ARRAY (NOW 5 QUESTIONS)
+        const questions = [
+            {
+                question: "Which language is used for web development?",
+                options: ["Python", "HTML", "C++", "Java"],
+                answer: 1
+            },
+            {
+                question: "Which library is used for DOM manipulation?",
+                options: ["React", "Angular", "jQuery", "Vue"],
+                answer: 2
+            },
+            {
+                question: "What does CSS stand for?",
+                options: [
+                    "Color Style Sheets",
+                    "Cascading Style Sheets",
+                    "Creative Style System",
+                    "Computer Style Sheets"
+                ],
+                answer: 1
+            },
+            {
+                question: "Which symbol is used for jQuery?",
+                options: ["#", "$", "@", "&"],
+                answer: 1
+            },
+            {
+                question: "Which HTML tag is used to link JavaScript?",
+                options: ["js", "script", "javascript", "link"],
+                answer: 1
+            }
+        ];
+    
+        let currentQuestion = 0;
+        let userAnswers = [];
+        let username = "";
+        let rollno = "";
+        let timeLeft = 60;
+        let timerInterval;
+    
+        // START QUIZ
+        $("#startQuiz").click(function () {
+            username = $("#username").val().trim();
+            rollno = $("#rollno").val().trim();
+    
+            if (username === "" || rollno === "") {
+                $(".error").text("Please enter name and roll number.");
+                return;
+            }
+    
+            $("#userInfo").fadeOut(function () {
+                $("#quiz").fadeIn();
+                startTimer();
+                loadQuestion();
+            });
+        });
+    
+        // TIMER FUNCTION
+        function startTimer() {
+            $("#timer").text(timeLeft);
+    
+            timerInterval = setInterval(function () {
+                timeLeft--;
+                $("#timer").text(timeLeft);
+    
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    showSummary();
+                }
+            }, 1000);
+        }
+    
+        // LOAD QUESTION
+        function loadQuestion() {
+            $(".error").text("");
+            const q = questions[currentQuestion];
+    
+            $(".question").text(`Q${currentQuestion + 1}. ${q.question}`);
+            $(".options").empty();
+    
+            $.each(q.options, function (index, option) {
+                const checked = userAnswers[currentQuestion] === index ? "checked" : "";
+                $(".options").append(`
+                    <label>
+                        <input type="radio" name="option" value="${index}" ${checked}>
+                        ${option}
+                    </label>
+                `);
+            });
+        }
+    
+        // NEXT BUTTON
+        $("#nextBtn").click(function () {
+            const selected = $("input[name='option']:checked").val();
+    
+            if (selected === undefined) {
+                $(".error").text("Please select an answer before continuing.");
+                return;
+            }
+    
+            userAnswers[currentQuestion] = parseInt(selected);
+    
+            if (currentQuestion < questions.length - 1) {
+                currentQuestion++;
+                $("#quiz").fadeOut(function () {
+                    loadQuestion();
+                    $("#quiz").fadeIn();
+                });
+            } else {
+                clearInterval(timerInterval);
+                showSummary();
+            }
+        });
+    
+        // PREVIOUS BUTTON
+        $("#prevBtn").click(function () {
+            if (currentQuestion > 0) {
+                currentQuestion--;
+                $("#quiz").fadeOut(function () {
+                    loadQuestion();
+                    $("#quiz").fadeIn();
+                });
+            }
+        });
+    
+        // SHOW SUMMARY
+        function showSummary() {
+            let score = 0;
+    
+            for (let i = 0; i < questions.length; i++) {
+                if (userAnswers[i] === questions[i].answer) {
+                    score++;
+                }
+            }
+    
+            $("#quiz").fadeOut(function () {
+                $("#summaryText").html(`
+                    <strong>Name:</strong> ${username}<br>
+                    <strong>Roll No:</strong> ${rollno}<br><br>
+                    <strong>Total Questions:</strong> ${questions.length}<br>
+                    <strong>Correct Answers:</strong> ${score}
+                `);
+                $("#summary").fadeIn();
+            });
+        }
+    
+        // RESTART QUIZ
+        $("#restartQuiz").click(function () {
+            currentQuestion = 0;
+            userAnswers = [];
+            timeLeft = 60;
+            clearInterval(timerInterval);
+    
+            $("#summary").fadeOut(function () {
+                $("#userInfo").fadeIn();
+            });
+        });
+    
+    });
+    </script>
+</body>
+</html>    
